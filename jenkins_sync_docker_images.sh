@@ -167,7 +167,14 @@ function sync_image() {
     if [[ ! -z $(echo "$line" | grep '/') ]]; then
         case $dest_registry in
         library)
-            image_name=$(echo $line | awk -F':|/' '{print $(NF-2)"/"$(NF-1)}')
+            image_name="$line"
+            if [[ "$line" == */* ]]; then
+                first_part="${line%%/*}"
+                if [[ "$first_part" == *.* ]]; then
+                    image_name="${line#*/}"
+                fi
+            fi
+            image_name=$(echo $image_name | awk -F':' '{print $1}')
             ;;
         *)
             image_name=$(echo $line | awk -F':|/' '{print $(NF-1)}')
@@ -180,7 +187,7 @@ function sync_image() {
         image_name=$(echo ${line%:*})
     fi
     image_name=$(echo $image_name | sed 's@registry.k8s.io/@@' | sed 's@quay.io/@@')
-    image_tag=$(echo $line | awk -F: '{print $2}')
+    image_tag=$(echo $line | awk -F: '{sub(/.*:/, "", $0); print $0}')
     check_image $image_name $image_tag
     return_echo "检测镜像 [$image_name] 存在 "
     if [ $? -ne 0 ]; then
